@@ -26,9 +26,12 @@ public class TheStack : MonoBehaviour
     public Color prevColor;
     public Color currentColor;
 
+    bool isMovingX = true;
+
     // Start is called before the first frame update
     void Start()
     {
+        int i =comboCount;
         if (originBlock == null)
         {
             Debug.Log("OriginBlock is NULL");
@@ -42,6 +45,7 @@ public class TheStack : MonoBehaviour
         prevBlockPosition = Vector3.down;
 
         Spawn_Block();
+        Spawn_Block();
     }
 
     // Update is called once per frame
@@ -49,8 +53,17 @@ public class TheStack : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            Spawn_Block();
+            if (PlaceBlock())
+            {
+                Spawn_Block();
+            }
+            else
+            {
+                Debug.Log("GameOver!");
+            }
         }
+
+        MoveBlock();
         
         // 선형 보간을 통한 부드러운 이동
         transform.position = Vector3.Lerp(transform.position, desiredPosition, StackMovingSpeed*Time.deltaTime); ;
@@ -88,6 +101,8 @@ public class TheStack : MonoBehaviour
 
         lastBlock = newTrans;
 
+        isMovingX = !isMovingX;
+
         return true;
     }
 
@@ -120,5 +135,132 @@ public class TheStack : MonoBehaviour
             prevColor = currentColor;
             currentColor = GetRandomColor();
         }
+    }
+
+    void MoveBlock()
+    {
+        blockTransition += Time.deltaTime * BlockMovingSpeed;
+
+        // sin 을 이용해도 되지만, 직선움직임을 위해
+        float movePostion = Mathf.PingPong(blockTransition, BoundSize) - BoundSize / 2;
+
+        if (isMovingX)
+        {
+            lastBlock.localPosition = 
+                new Vector3(movePostion * MovingBoundSize, stackCount, secondaryPosition);
+        }
+        else
+        {
+            lastBlock.localPosition = 
+                new Vector3(secondaryPosition, stackCount, -movePostion * MovingBoundSize);
+        }
+    }
+
+    bool PlaceBlock()
+    {
+        Vector3 lastPosition = lastBlock.localPosition;
+
+        if (isMovingX)
+        {
+            float deltaX = prevBlockPosition.x - lastPosition.x;
+
+            // 떨어질 조각 방향 설정
+            bool isNegativeNum = (deltaX < 0) ? true : false;
+
+            deltaX = Mathf.Abs(deltaX);            
+            if (deltaX > ErrorMargin)
+            {
+                stackBounds.x -= deltaX;
+                if (stackBounds.x <= 0)
+                {
+                    // 게임 오버
+                    return false;
+                }
+
+                // 두 블럭의 중심지점 찾기
+                float middle = (prevBlockPosition.x + lastPosition.x) / 2f;
+                lastBlock.localScale = new Vector3(stackBounds.x, 1, stackBounds.y);
+
+                Vector3 tempPosition = lastBlock.localPosition;
+                tempPosition.x = middle;
+                lastBlock.localPosition = lastPosition = tempPosition;
+
+                float rubbleHalfScale = deltaX / 2f;
+                CreateRubble(
+                    new Vector3(isNegativeNum
+                            ? lastPosition.x + stackBounds.x / 2 + rubbleHalfScale
+                            : lastPosition.x - stackBounds.x / 2 - rubbleHalfScale
+                        , lastPosition.y
+                        , lastPosition.z),
+                    new Vector3(deltaX, 1, stackBounds.y)
+                );
+            }
+            else
+            {
+                // errorMargin 보다 작다면 성공으로 보고 보정해준다.
+                lastBlock.localPosition = prevBlockPosition + Vector3.up;
+            }
+        }
+        else
+        {
+            float deltaZ = prevBlockPosition.z - lastPosition.z;
+
+            bool isNegativeNum = (deltaZ < 0) ? true : false;
+            deltaZ = Mathf.Abs(deltaZ);
+
+
+            if (deltaZ > ErrorMargin)
+            {
+                stackBounds.y -= deltaZ;
+                if (stackBounds.y <= 0)
+                {
+                    // 게임 오버
+                    return false;
+                }
+
+                // 두 블럭의 중심지점 찾기
+                float middle = (prevBlockPosition.z + lastPosition.z) / 2f;
+                lastBlock.localScale = new Vector3(stackBounds.x, 1, stackBounds.y);
+
+                Vector3 tempPosition = lastBlock.localPosition;
+                tempPosition.z = middle;
+                lastBlock.localPosition = lastPosition = tempPosition;
+
+                float rubbleHalfScale = deltaZ / 2f;
+                CreateRubble(
+                    new Vector3(
+                        lastPosition.x
+                        , lastPosition.y
+                        , isNegativeNum
+                            ? lastPosition.z + stackBounds.y / 2 + rubbleHalfScale
+                            : lastPosition.z - stackBounds.y / 2 - rubbleHalfScale),
+                    new Vector3(stackBounds.x, 1, deltaZ)
+                );
+            }
+            else
+            {
+                // errorMargin 보다 작다면 성공으로 보고 보정해준다.
+                lastBlock.localPosition = prevBlockPosition + Vector3.up;
+            }
+        }
+
+        secondaryPosition = (isMovingX) ? lastBlock.localPosition.x : lastBlock.localPosition.z;
+
+        return true;
+    }
+
+    void CreateRubble(Vector3 pos, Vector3 scale)
+    {
+        // 지금의 블록을 복제
+        GameObject go = Instantiate(lastBlock.gameObject);
+        go.transform.parent = this.transform;
+
+        go.transform.localPosition = pos;
+        go.transform.localRotation = Quaternion.identity;
+        go.transform.localScale = scale;
+
+        go.AddComponent<Rigidbody>();
+        go.name = "Rubble";
+
     }
 }
