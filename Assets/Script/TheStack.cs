@@ -42,6 +42,9 @@ public class TheStack : MonoBehaviour
     private const string BestScoreKey = "BestScore";
     private const string BestComboKey = "BestCombo";
 
+    // 게임 오버 관련
+    private bool isGameOver = false;
+
 
     // Start is called before the first frame update
     void Start()
@@ -71,6 +74,8 @@ public class TheStack : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (isGameOver) return;
+
         if (Input.GetMouseButtonDown(0))
         {
             if (PlaceBlock())
@@ -79,8 +84,11 @@ public class TheStack : MonoBehaviour
             }
             else
             {
+                // 게임 오버
                 Debug.Log("GameOver!");
                 UpdateScore();
+                isGameOver = true;
+                GameOverEffect();
             }
         }
 
@@ -318,6 +326,27 @@ public class TheStack : MonoBehaviour
             // 저장하기
             PlayerPrefs.SetInt(BestComboKey, bestCombo);
             PlayerPrefs.SetInt(BestScoreKey, bestScore);
+        }
+    }
+
+    void GameOverEffect()
+    {
+        int childCount = this.transform.childCount;
+
+        for (int i=1; i < 20; i++)
+        {
+            if (childCount < i) break;
+
+            // 하위 오브젝트를 인덱스로 찾는 기능
+            GameObject go = transform.GetChild(childCount - i).gameObject;
+
+            if (go.name.Equals("Rubble")) continue;
+
+            Rigidbody rigid = go.AddComponent<Rigidbody>();
+
+            rigid.AddForce(
+                (Vector3.up * Random.Range(0, 10f) + Vector3.right * (Random.Range(0, 10f) - 5f)) * 100f
+                );
         }
     }
 }
