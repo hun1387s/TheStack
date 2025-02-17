@@ -43,7 +43,7 @@ public class TheStack : MonoBehaviour
     private const string BestComboKey = "BestCombo";
 
     // 게임 오버 관련
-    private bool isGameOver = false;
+    private bool isGameOver = true;
 
 
     // Start is called before the first frame update
@@ -89,6 +89,7 @@ public class TheStack : MonoBehaviour
                 UpdateScore();
                 isGameOver = true;
                 GameOverEffect();
+                UIManager.Instance.SetScoreUI();
             }
         }
 
@@ -131,6 +132,8 @@ public class TheStack : MonoBehaviour
         lastBlock = newTrans;
 
         isMovingX = !isMovingX;
+
+        UIManager.Instance.UpdateScore();
 
         return true;
     }
@@ -349,4 +352,37 @@ public class TheStack : MonoBehaviour
                 );
         }
     }
+
+    public void Restart()
+    {
+        int childCount = transform.childCount;
+
+        for (int i =0; i<childCount; i++)
+        {
+            Destroy(transform.GetChild(i).gameObject);
+        }
+
+        isGameOver = false;
+        lastBlock = null;
+        desiredPosition = Vector3.zero;
+        stackBounds = new Vector3(BoundSize, BoundSize);
+
+        stackCount = -1;
+        isMovingX = true;
+        blockTransition = 0f;
+        secondaryPosition = 0f;
+
+        comboCount = 0;
+        maxCombo = 0;
+
+        prevBlockPosition = Vector3.down;
+
+        prevColor = GetRandomColor();
+        currentColor = GetRandomColor();
+
+        Spawn_Block();
+        Spawn_Block();
+
+    }
+
 }
