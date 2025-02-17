@@ -21,12 +21,27 @@ public class TheStack : MonoBehaviour
     float secondaryPosition = 0f;
 
     int stackCount = -1;
+    public int Score { get { return stackCount; } }
     int comboCount = 0;
+    public int Combo { get { return comboCount; } }
+
+    int maxCombo = 0;
+    public int MaxCombo { get => maxCombo; }
 
     public Color prevColor;
     public Color currentColor;
 
     bool isMovingX = true;
+
+    // 저장 불러오기
+    int bestScore = 0;
+    public int BestScore { get => bestScore; }
+    int bestCombo = 0;
+    public int BestCombo { get => bestCombo; }
+
+    private const string BestScoreKey = "BestScore";
+    private const string BestComboKey = "BestCombo";
+
 
     // Start is called before the first frame update
     void Start()
@@ -37,6 +52,11 @@ public class TheStack : MonoBehaviour
             Debug.Log("OriginBlock is NULL");
             return;
         }
+
+        // 불러오기
+        // 지정한 Key에 값이 없다면 , default값인 0 반환
+        bestScore = PlayerPrefs.GetInt(BestScoreKey, 0);
+        bestScore = PlayerPrefs.GetInt(BestScoreKey, 0);
 
         prevColor = GetRandomColor();
         currentColor = GetRandomColor();
@@ -60,6 +80,7 @@ public class TheStack : MonoBehaviour
             else
             {
                 Debug.Log("GameOver!");
+                UpdateScore();
             }
         }
 
@@ -194,9 +215,11 @@ public class TheStack : MonoBehaviour
                         , lastPosition.z),
                     new Vector3(deltaX, 1, stackBounds.y)
                 );
+                comboCount = 0;
             }
             else
             {
+                ComboCheck();
                 // errorMargin 보다 작다면 성공으로 보고 보정해준다.
                 lastBlock.localPosition = prevBlockPosition + Vector3.up;
             }
@@ -236,9 +259,13 @@ public class TheStack : MonoBehaviour
                             : lastPosition.z - stackBounds.y / 2 - rubbleHalfScale),
                     new Vector3(stackBounds.x, 1, deltaZ)
                 );
+                comboCount = 0;
             }
+            
+
             else
             {
+                ComboCheck();
                 // errorMargin 보다 작다면 성공으로 보고 보정해준다.
                 lastBlock.localPosition = prevBlockPosition + Vector3.up;
             }
@@ -262,5 +289,35 @@ public class TheStack : MonoBehaviour
         go.AddComponent<Rigidbody>();
         go.name = "Rubble";
 
+    }
+
+    void ComboCheck()
+    {
+        comboCount++;
+        if (maxCombo < comboCount)
+            maxCombo = comboCount;
+
+        if (comboCount % 5 == 0)
+        {
+            Debug.Log("5 Combo Success!");
+            stackBounds += new Vector3(0.5f, 0.5f);
+            stackBounds.x = (stackBounds.x > BoundSize) ? BoundSize : stackBounds.x;
+            stackBounds.y = (stackBounds.y > BoundSize) ? BoundSize : stackBounds.y;
+
+        }
+    }
+
+    void UpdateScore()
+    {
+        if (bestScore < stackCount)
+        {
+            Debug.Log("최고 점수 갱신");
+            bestScore = stackCount;
+            bestCombo = maxCombo;
+
+            // 저장하기
+            PlayerPrefs.SetInt(BestComboKey, bestCombo);
+            PlayerPrefs.SetInt(BestScoreKey, bestScore);
+        }
     }
 }
